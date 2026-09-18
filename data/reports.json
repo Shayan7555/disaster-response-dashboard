@@ -1,0 +1,52 @@
+[
+  {
+    "id": "1789205025537",
+    "type": "medical",
+    "description": "broken leg",
+    "lat": 28.12286,
+    "lng": 82.30766,
+    "contact": "",
+    "status": "open",
+    "createdAt": "2026-09-12T09:23:45.537Z"
+  },
+  {
+    "id": "1789205098400",
+    "type": "shelter",
+    "description": "shelter washed off need safe place to stay\n",
+    "lat": 28.13013,
+    "lng": 82.72041,
+    "contact": "",
+    "status": "open",
+    "createdAt": "2026-09-12T09:24:58.400Z"
+  },
+  {
+    "id": "1789206292893",
+    "type": "medical",
+    "description": "",
+    "lat": 22.78763,
+    "lng": 86.16163,
+    "contact": "",
+    "status": "resolved",
+    "createdAt": "2026-09-12T09:44:52.893Z"
+  },
+  {
+    "id": "1789233534696",
+    "type": "missing_person",
+    "description": "missing friend",
+    "lat": 28.08864,
+    "lng": 82.88381,
+    "contact": "9570173332",
+    "status": "in_progress",
+    "createdAt": "2026-09-12T17:18:54.696Z"
+  },
+  {
+    "id": "1789664336337",
+    "type": "medical",
+    "description": "",
+    "lat": 28.18824,
+    "lng": 78.80081,
+    "contact": "",
+    "status": "resolved",
+    "createdAt": "2026-09-17T16:58:56.338Z"
+  }
+]

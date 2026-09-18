@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nepal Flood Response Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      display: flex;
+      height: 100vh;
+    }
+    #sidebar {
+      width: 320px;
+      padding: 16px;
+      overflow-y: auto;
+      border-right: 1px solid #ddd;
+    }
+    #map { flex: 1; }
+    label { display: block; margin-top: 10px; font-size: 14px; }
+    input, select, textarea {
+      width: 100%; padding: 6px; margin-top: 4px; box-sizing: border-box;
+    }
+    button {
+      margin-top: 14px; width: 100%; padding: 10px;
+      background: #c0392b; color: white; border: none; border-radius: 4px;
+      cursor: pointer; font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <h2>Report a Need</h2>
+
+    <form id="report-form">
+      <label>Type of need</label>
+      <select id="type" required>
+        <option value="medical">Medical</option>
+        <option value="water">Water</option>
+        <option value="shelter">Shelter</option>
+        <option value="missing_person">Missing Person</option>
+      </select>
+
+      <label>Description</label>
+      <textarea id="description" rows="3" placeholder="What's needed, how many people, etc."></textarea>
+
+      <label>Latitude</label>
+      <input id="lat" type="number" step="any" placeholder="e.g. 28.1" required />
+
+      <label>Longitude</label>
+      <input id="lng" type="number" step="any" placeholder="e.g. 85.35" required />
+
+      <label>Contact (optional)</label>
+      <input id="contact" type="text" placeholder="Phone number" />
+
+      <button type="submit">Submit Report</button>
+    </form>
+
+    <p style="font-size:13px;color:#666;margin-top:20px;">
+      Tip: click anywhere on the map to auto-fill latitude/longitude.
+    </p>
+
+    <div style="margin-top:20px;border-top:1px solid #eee;padding-top:14px;">
+      <h3 style="font-size:13px;color:#666;margin:0 0 8px 0;">Filter by type</h3>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
+        <input type="checkbox" class="filter-cb" value="medical" checked style="width:auto;margin:0;"> Medical
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
+        <input type="checkbox" class="filter-cb" value="water" checked style="width:auto;margin:0;"> Water
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
+        <input type="checkbox" class="filter-cb" value="shelter" checked style="width:auto;margin:0;"> Shelter
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
+        <input type="checkbox" class="filter-cb" value="missing_person" checked style="width:auto;margin:0;"> Missing Person
+      </label>
+    </div>
+
+    <p id="last-updated" style="font-size:11px;color:#aaa;margin-top:16px;"></p>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const map = L.map('map').setView([28.1, 84.8], 8);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const colors = {
+      medical: 'red',
+      water: 'blue',
+      shelter: 'orange',
+      missing_person: 'purple'
+    };
+
+    let markers = [];
+    let allReports = [];
+
+    async function loadReports() {
+      const response = await fetch('/api/reports');
+      allReports = await response.json();
+      render();
+
+      // Show when the last successful refresh happened — useful feedback
+      // so you can visually confirm polling is actually running.
+      const now = new Date();
+      document.getElementById('last-updated').textContent =
+        'Last updated: ' + now.toLocaleTimeString();
+    }
+
+    function getActiveFilters() {
+      return Array.from(document.querySelectorAll('.filter-cb:checked'))
+        .map(cb => cb.value);
+    }
+
+    function render() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      const activeTypes = getActiveFilters();
+      const visibleReports = allReports.filter(r => activeTypes.includes(r.type));
+
+      visibleReports.forEach(report => {
+        const isResolved = report.status === 'resolved';
+
+        const marker = L.circleMarker([report.lat, report.lng], {
+          radius: 8,
+          color: colors[report.type] || 'gray',
+          fillOpacity: isResolved ? 0.25 : 0.85,
+          opacity: isResolved ? 0.4 : 1
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <b>${report.type.replace('_',' ').toUpperCase()}</b><br>
+          ${report.description || '(no description)'}<br>
+          <small>${report.contact || ''}</small><br><br>
+          <select id="status-${report.id}">
+            <option value="open" ${report.status === 'open' ? 'selected' : ''}>Open</option>
+            <option value="in_progress" ${report.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+            <option value="resolved" ${report.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+          </select>
+          <button onclick="updateStatus('${report.id}')" style="margin-top:6px;padding:4px 8px;">Update</button>
+        `);
+
+        markers.push(marker);
+      });
+
+      updateSidebarList(visibleReports);
+    }
+
+    window.updateStatus = async function(id) {
+      const select = document.getElementById(`status-${id}`);
+      const newStatus = select.value;
+
+      await fetch(`/api/reports/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      loadReports();
+    };
+
+    function updateSidebarList(reports) {
+      let list = document.getElementById('sidebar-list');
+      if (!list) {
+        list = document.createElement('div');
+        list.id = 'sidebar-list';
+        list.style.marginTop = '16px';
+        list.style.borderTop = '1px solid #eee';
+        list.style.paddingTop = '12px';
+        document.getElementById('sidebar').appendChild(list);
+      }
+      list.innerHTML = `<h3 style="font-size:13px;color:#666;margin:0 0 8px 0;">Reports (${reports.length})</h3>` +
+        reports.map(r => `
+          <div style="font-size:12px;padding:6px;margin-bottom:4px;background:#fafafa;border-radius:4px;">
+            <b style="color:${colors[r.type]}">${r.type.replace('_',' ')}</b> — ${r.status}<br>
+            ${r.description || ''}
+          </div>
+        `).join('');
+    }
+
+    document.querySelectorAll('.filter-cb').forEach(cb => {
+      cb.addEventListener('change', render);
+    });
+
+    const form = document.getElementById('report-form');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const newReport = {
+        type: document.getElementById('type').value,
+        description: document.getElementById('description').value,
+        lat: document.getElementById('lat').value,
+        lng: document.getElementById('lng').value,
+        contact: document.getElementById('contact').value
+      };
+
+      await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReport)
+      });
+
+      form.reset();
+      loadReports();
+    });
+
+    map.on('click', (e) => {
+      document.getElementById('lat').value = e.latlng.lat.toFixed(5);
+      document.getElementById('lng').value = e.latlng.lng.toFixed(5);
+    });
+
+    // ---- Initial load ----
+    loadReports();
+
+    // ---- Live polling: re-check the server every 10 seconds ----
+    // setInterval runs a function repeatedly, forever, at a fixed delay
+    // (in milliseconds — 10000ms = 10 seconds). If someone else submits a
+    // report from a different browser, you'll see it appear here
+    // automatically within 10 seconds, no manual refresh needed.
+    setInterval(loadReports, 10000);
+  </script>
+</body>
+</html>
