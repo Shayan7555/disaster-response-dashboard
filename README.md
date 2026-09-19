@@ -1,36 +1,32 @@
-# Nepal Flood Response Dashboard (learning project)
+# Nepal Flood Response Dashboard
 
-## What this is
-A minimal full-stack app: a map where field reports (medical/water/shelter/
-missing person needs) can be submitted and viewed live. Built step-by-step
-as a learning project covering Node.js, Express, REST APIs, and Leaflet.js.
+A live, full-stack disaster-response coordination tool — built in response to
+the August 2026 Nepal floods, where communication breakdowns and damaged
+infrastructure made it difficult to coordinate real-time relief efforts.
 
-## How to run it on your machine
+**Live demo:** https://disaster-response-dashboard.onrender.com
 
-1. **Install Node.js** if you don't have it: https://nodejs.org (LTS version)
+## What it does
+- Submit field reports (medical, water, shelter, missing person) with a
+  location on an interactive map
+- Color-coded, filterable markers by need type
+- Status workflow: open → in progress → resolved
+- Live polling — dashboard auto-refreshes every 10 seconds for multi-user
+  coordination
 
-2. **Unzip this project**, then open a terminal inside the folder:
-   ```
-   cd disaster-response
-   ```
+## Tech stack
+- **Backend:** Node.js, Express, REST API
+- **Frontend:** Leaflet.js, vanilla JavaScript
+- **Deployment:** Render, with GitHub-integrated CI
 
-3. **Install dependencies** (this recreates the node_modules folder,
-   which we intentionally didn't include in the zip):
-   ```
-   npm install
-   ```
-
-4. **Start the server**:
-   ```
-   node server.js
-   ```
-   You should see: `Server running at http://localhost:3000`
-
-5. **Open your browser** to http://localhost:3000 — you'll see the map
-   and the report form.
-
-6. Click on the map to auto-fill coordinates, fill in the form, and submit —
-   watch the marker appear immediately.
+## Running it locally
+```
+git clone https://github.com/Shayan7555/disaster-response-dashboard.git
+cd disaster-response-dashboard
+npm install
+node server.js
+```
+Then open http://localhost:3000
 
 ## Project structure
 ```
@@ -38,12 +34,24 @@ disaster-response/
 ├── server.js          # Express backend + REST API
 ├── data/reports.json  # simple file-based "database"
 ├── public/index.html  # frontend: map + form (Leaflet.js)
-└── package.json        # dependencies
+└── package.json       # dependencies
 ```
 
-## What's next (see the roadmap in chat)
-- Color-code/filter markers by type
-- Status workflow (open → in progress → resolved)
-- Live polling for multi-user updates
-- Real SMS intake via Twilio
-- Deployment + swapping JSON file for a real database
+## What I learned building this
+- Designing and testing a REST API (GET/POST/PATCH) with curl before
+  building any UI, to isolate backend bugs from frontend bugs
+- Debugging real-world deployment issues — dynamic PORT assignment,
+  environment differences between local and production
+- Git/GitHub workflow: staging, committing, pushing, and connecting a repo
+  to a live deployment pipeline
+
+## Known limitations
+- Data is stored in a JSON file, which resets whenever the server restarts
+  on Render's free tier (no persistent disk). A future version would move
+  to a real database (e.g. PostgreSQL).
+
+## Possible next steps
+- Real SMS/WhatsApp intake via Twilio (a stub endpoint is already
+  scaffolded at `/api/sms-webhook`)
+- Persistent database instead of file-based storage
+- User authentication for coordinators
